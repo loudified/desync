@@ -1,0 +1,3389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>desync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --bg: #070709;
+      --surface: rgba(14, 14, 21, 0.75);
+      --surface-hover: rgba(22, 22, 32, 0.88);
+      --surface-solid: #0b0b11;
+      --surface-pill: #12121c;
+      --border: rgba(255, 255, 255, 0.07);
+      --border-highlight: rgba(124, 92, 255, 0.42);
+      --text: #ececf2;
+      --text-dim: #737386;
+      --accent: #7c5cff;
+      --nitro: #ff5ca8;
+      --cyan: #38bdf8;
+      --pink: #f43f5e;
+      --amber: #f59e0b;
+      --discord: #5865f2;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      text-transform: lowercase !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 78% 36%, rgba(124, 92, 255, 0.08) 0%, transparent 55%),
+        radial-gradient(circle at 18% 82%, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #webgl-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navbar */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 36px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(7, 7, 9, 0.72);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      cursor: pointer;
+      user-select: none;
+      height: 36px;
+    }
+
+    #liquid-logo-canvas {
+      width: 144px;
+      height: 36px;
+      display: block;
+      transition: transform 0.2s ease;
+    }
+
+    .brand:hover #liquid-logo-canvas {
+      transform: scale(1.03);
+    }
+
+    .top-tabs {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.025);
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 6px 14px;
+      border-radius: 999px;
+      color: var(--text-dim);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.03);
+      transform: none;
+    }
+
+    .tab-btn.active {
+      background: var(--surface-pill);
+      color: #ffffff;
+      border-color: var(--border-highlight);
+      box-shadow: 0 4px 16px rgba(124, 92, 255, 0.18);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button, .btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+      backdrop-filter: blur(14px);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      outline: none;
+    }
+
+    button:hover, .btn:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      background: var(--surface-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: #ffffff;
+      color: #070709;
+      font-weight: 600;
+      border-color: transparent;
+    }
+
+    .btn-primary:hover {
+      background: #f0f0f7;
+      color: #070709;
+      box-shadow: 0 0 24px rgba(255, 255, 255, 0.22);
+    }
+
+    .btn-discord {
+      background: #5865f2;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-weight: 500;
+      box-shadow: 0 8px 26px -6px rgba(88, 101, 242, 0.55);
+    }
+
+    .btn-discord:hover {
+      background: #4e5be0;
+      border-color: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 10px 30px -4px rgba(88, 101, 242, 0.72);
+      color: #ffffff;
+    }
+
+    .btn-accent {
+      background: rgba(124, 92, 255, 0.15);
+      border-color: rgba(124, 92, 255, 0.42);
+      color: #ddd6fe;
+    }
+
+    .btn-accent:hover {
+      background: rgba(124, 92, 255, 0.25);
+      border-color: var(--accent);
+    }
+
+    .btn-booster {
+      background: linear-gradient(135deg, rgba(255, 92, 168, 0.18), rgba(124, 92, 255, 0.18));
+      border-color: rgba(255, 92, 168, 0.45);
+      color: #fbcfe8;
+    }
+
+    .wallet-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(16, 185, 129, 0.09);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      color: #a7f3d0;
+      font-weight: 600;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* Role colors */
+    .role-owner { color: #f43f5e !important; text-shadow: 0 0 12px rgba(244, 63, 94, 0.4); }
+    .role-admin { color: #a78bfa !important; text-shadow: 0 0 12px rgba(167, 139, 250, 0.35); }
+    .role-mod { color: #38bdf8 !important; }
+    .role-booster { color: #ff5ca8 !important; text-shadow: 0 0 12px rgba(255, 92, 168, 0.4); }
+    .role-member { color: #818cf8 !important; }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--text-dim);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge.owner { border-color: rgba(244, 63, 94, 0.5); color: #fda4af; background: rgba(244, 63, 94, 0.14); }
+    .badge.admin { border-color: rgba(124, 92, 255, 0.45); color: #c4b5fd; background: rgba(124, 92, 255, 0.14); }
+    .badge.mod { border-color: rgba(56, 189, 248, 0.45); color: #bae6fd; background: rgba(56, 189, 248, 0.12); }
+    .badge.booster { border-color: rgba(255, 92, 168, 0.5); color: #fbcfe8; background: linear-gradient(90deg, rgba(255,92,168,0.18), rgba(124,92,255,0.18)); }
+    .badge.verified { border-color: rgba(16, 185, 129, 0.35); color: var(--success); background: rgba(16, 185, 129, 0.1); }
+
+    /* LANDING VIEW */
+    #landing-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 64px 48px 48px;
+      max-width: 1320px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .hero {
+      max-width: 620px;
+      margin-top: 3vh;
+    }
+
+    #hero-liquid-canvas {
+      width: 320px;
+      height: 82px;
+      display: block;
+      margin-bottom: 16px;
+      margin-left: -4px;
+    }
+
+    .hero h1 {
+      font-size: 38px;
+      font-weight: 500;
+      letter-spacing: -0.04em;
+      line-height: 1.12;
+      margin-bottom: 18px;
+      color: #ffffff;
+    }
+
+    .hero p {
+      color: var(--text-dim);
+      font-size: 15px;
+      line-height: 1.65;
+      margin-bottom: 30px;
+      max-width: 530px;
+    }
+
+    .hero-cta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 84px;
+    }
+
+    .bento-card {
+      background: linear-gradient(180deg, rgba(16, 16, 24, 0.68) 0%, rgba(9, 9, 14, 0.82) 100%);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      transition: border-color 0.25s ease, transform 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .bento-card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .bento-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      width: fit-content;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: #a5a5b8;
+      margin-bottom: 12px;
+    }
+
+    .bento-card h3 {
+      font-size: 15.5px;
+      font-weight: 500;
+      color: #ffffff;
+      letter-spacing: -0.025em;
+      margin-bottom: 6px;
+    }
+
+    .bento-card p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.55;
+    }
+
+    .game-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .game-tag {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(124, 92, 255, 0.1);
+      border: 1px solid rgba(124, 92, 255, 0.24);
+      color: #cfc4fc;
+    }
+
+    /* LOGGED-IN WORKSPACE */
+    #member-workspace {
+      display: none;
+      flex: 1;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 36px 64px;
+    }
+
+    /* FORUM CATEGORY LAYOUT */
+    .forum-category-block {
+      background: rgba(10, 10, 15, 0.72);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      margin-bottom: 22px;
+      overflow: hidden;
+      backdrop-filter: blur(24px);
+    }
+
+    .forum-category-block.booster-cat {
+      border-color: rgba(255, 92, 168, 0.28);
+      box-shadow: 0 0 38px -14px rgba(255, 92, 168, 0.22);
+    }
+
+    .cat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 24px;
+      background: linear-gradient(90deg, rgba(18, 18, 28, 0.92) 0%, rgba(12, 12, 19, 0.85) 100%);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .cat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+    }
+
+    .cat-toggle-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    /* Bespoke desync glassmorphic ledger row (zero vacban circular bubbles) */
+    .desync-ledger-row {
+      display: grid;
+      grid-template-columns: 1.4fr auto 240px;
+      align-items: center;
+      gap: 24px;
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.038);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .desync-ledger-row:last-child {
+      border-bottom: none;
+    }
+
+    .desync-ledger-row::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, var(--accent), var(--cyan));
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .desync-ledger-row:hover {
+      background: linear-gradient(90deg, rgba(124, 92, 255, 0.065) 0%, rgba(56, 189, 248, 0.02) 60%, transparent 100%);
+    }
+
+    .desync-ledger-row:hover::before {
+      opacity: 1;
+    }
+
+    .node-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .node-emblem {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .node-emblem::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.14), transparent 70%);
+      pointer-events: none;
+    }
+
+    .node-text {
+      min-width: 0;
+    }
+
+    .node-title-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 3px;
+      flex-wrap: wrap;
+    }
+
+    .node-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+
+    .micro-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 5px;
+      background: rgba(124, 92, 255, 0.14);
+      border: 1px solid rgba(124, 92, 255, 0.35);
+      color: #ddd6fe;
+    }
+
+    .staff-pill {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      color: #bae6fd;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 5px;
+    }
+
+    .booster-pill {
+      background: linear-gradient(90deg, rgba(255, 92, 168, 0.18), rgba(124, 92, 255, 0.18));
+      border: 1px solid rgba(255, 92, 168, 0.45);
+      color: #fbcfe8;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 5px;
+    }
+
+    .node-desc {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Inline slash-separated telemetry + micro-bar */
+    .node-telemetry {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      min-width: 175px;
+    }
+
+    .telemetry-line {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .telemetry-line strong {
+      color: #e4e4f0;
+      font-weight: 600;
+    }
+
+    .telemetry-slash {
+      color: rgba(255, 255, 255, 0.16);
+    }
+
+    .telemetry-bar {
+      width: 124px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .telemetry-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    .node-latest {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      text-align: right;
+      border-left: 1px solid rgba(255, 255, 255, 0.05);
+      padding-left: 16px;
+    }
+
+    .latest-title {
+      font-size: 12.5px;
+      color: #e2e2ee;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .latest-meta {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .latest-empty {
+      font-size: 11.5px;
+      color: #4d4d5e;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    /* Section Thread View */
+    .subboard-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .breadcrumb span.crumb-link {
+      color: var(--cyan);
+      cursor: pointer;
+    }
+
+    .breadcrumb span.crumb-link:hover {
+      text-decoration: underline;
+    }
+
+    .thread-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .thread-item-row:hover {
+      border-color: var(--border-highlight);
+      background: var(--surface-hover);
+    }
+
+    .empty-board-box {
+      padding: 52px 24px;
+      text-align: center;
+      background: rgba(12, 12, 18, 0.68);
+      border: 1px dashed rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      color: var(--text-dim);
+    }
+
+    /* ==============================================================
+       BESPOKE DESYNC MODERN SPLIT-CARD THREAD ARCHITECTURE
+       ============================================================== */
+    .ds-post-card {
+      background: rgba(12, 12, 19, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.075);
+      border-radius: 16px;
+      margin-bottom: 18px;
+      overflow: hidden;
+      backdrop-filter: blur(22px);
+      box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+      transition: border-color 0.2s ease;
+    }
+
+    .ds-post-card:hover {
+      border-color: rgba(124, 92, 255, 0.28);
+    }
+
+    /* Floating Frosted-Glass Identity Header Bar */
+    .ds-identity-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 22px;
+      background: linear-gradient(90deg, rgba(20, 20, 31, 0.92) 0%, rgba(14, 14, 22, 0.78) 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .ds-id-left {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      flex-wrap: wrap;
+    }
+
+    .ds-avatar-wrap {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+    }
+
+    .ds-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: #5865f2;
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .ds-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .ds-status-prism {
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      width: 10px;
+      height: 10px;
+      transform: rotate(45deg);
+      background: #525266;
+      border: 2px solid #12121c;
+    }
+
+    .ds-status-prism.online {
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .ds-user-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ds-user-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ds-uid-pill {
+      font-size: 10.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 1px 7px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #9898ad;
+    }
+
+    .ds-rep-pill {
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .ds-rep-pill:hover {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--success);
+    }
+
+    .ds-user-sub {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ds-id-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .ds-post-body {
+      padding: 22px 24px;
+      font-size: 13.5px;
+      color: #e5e5f0;
+      line-height: 1.68;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Vertical Liquid-Violet Accent Quote Block (Zero Dashed Orange) */
+    .ds-quote-block {
+      background: linear-gradient(90deg, rgba(124, 92, 255, 0.1) 0%, rgba(18, 18, 28, 0.65) 100%);
+      border-left: 3px solid var(--accent);
+      border-top: 1px solid rgba(124, 92, 255, 0.22);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0 12px 12px 0;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+
+    .ds-quote-head {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #c4b5fd;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ds-quote-body {
+      color: #d4d4e4;
+    }
+
+    /* Cryptographic Payload Container for [hide] blocks */
+    .ds-payload-container {
+      background: #08080e;
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin: 12px 0;
+      box-shadow: inset 0 0 24px rgba(56, 189, 248, 0.06);
+    }
+
+    .ds-payload-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--cyan);
+      margin-bottom: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+    }
+
+    .ds-payload-content {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12.5px;
+      color: #e0f2fe;
+    }
+
+    /* Bottom Signature Strip & Action Bar */
+    .ds-signature-strip {
+      margin: 0 24px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.018);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      font-size: 12px;
+      color: #7c7c92;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ds-post-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      margin-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.045);
+      background: rgba(9, 9, 14, 0.55);
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ds-action-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      color: #9898ad;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ds-action-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: none;
+    }
+
+    .ds-action-btn.liked {
+      color: var(--cyan);
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    /* ROULETTE VIEW */
+    .roulette-shell {
+      background: rgba(12, 12, 18, 0.84);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      backdrop-filter: blur(22px);
+    }
+
+    .wheel-viewport {
+      position: relative;
+      width: 100%;
+      height: 112px;
+      background: #07070c;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 22px 0;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85);
+    }
+
+    .wheel-Viewport-fade {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #07070c 0%, transparent 18%, transparent 82%, #07070c 100%);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .wheel-center-marker {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #ffffff;
+      transform: translateX(-50%);
+      z-index: 3;
+      box-shadow: 0 0 14px #ffffff;
+    }
+
+    .wheel-track {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      gap: 8px;
+      padding: 0 12px;
+      will-change: transform;
+    }
+
+    .wheel-tile {
+      width: 84px;
+      height: 84px;
+      border-radius: 14px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      user-select: none;
+    }
+
+    .tile-void {
+      background: linear-gradient(145deg, rgba(124, 92, 255, 0.28), rgba(76, 29, 149, 0.45));
+      border-color: rgba(124, 92, 255, 0.5);
+      color: #ddd6fe;
+    }
+
+    .tile-cobalt {
+      background: linear-gradient(145deg, rgba(56, 189, 248, 0.24), rgba(12, 74, 110, 0.45));
+      border-color: rgba(56, 189, 248, 0.5);
+      color: #bae6fd;
+    }
+
+    .tile-zero {
+      background: linear-gradient(145deg, rgba(244, 63, 94, 0.35), rgba(124, 92, 255, 0.45));
+      border-color: #f43f5e;
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(244, 63, 94, 0.35);
+    }
+
+    .bet-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .bet-card {
+      background: rgba(18, 18, 27, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .history-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      display: inline-grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* CONFIG SHOP & STAFF CARDS */
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .config-card, .panel-card {
+      background: rgba(13, 13, 20, 0.86);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 3, 6, 0.82);
+      backdrop-filter: blur(16px);
+      display: none;
+      place-items: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: grid;
+    }
+
+    .modal {
+      background: var(--surface-solid);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 450px;
+      padding: 26px;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.9);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-wide {
+      max-width: 640px;
+    }
+
+    .modal-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+
+    .modal-top h3 {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .form-field {
+      margin-bottom: 13px;
+    }
+
+    .form-field label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .form-field input, .form-field textarea, .form-field select {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 13px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-field select option {
+      background: var(--surface-solid);
+      color: var(--text);
+    }
+
+    .form-field input:focus, .form-field textarea:focus, .form-field select:focus {
+      border-color: var(--accent);
+    }
+
+    #toast-notice {
+      position: fixed;
+      bottom: 26px;
+      right: 26px;
+      background: var(--surface-solid);
+      border: 1px solid rgba(124, 92, 255, 0.45);
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 13px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: all 0.22s ease;
+    }
+
+    #toast-notice.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1024px) {
+      .bento-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .desync-ledger-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .node-telemetry {
+        align-items: flex-start;
+      }
+      .node-latest {
+        text-align: left;
+        border-left: none;
+        padding-left: 0;
+      }
+      .shop-grid, .bet-grid {
+        grid-template-columns: 1fr;
+      }
+      header, #landing-view, #member-workspace {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Smooth Jitter-Free Three.js Background -->
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- Toast Notification -->
+  <div id="toast-notice">
+    <span class="pulse-dot"></span>
+    <span id="toast-text">notice</span>
+  </div>
+
+  <div class="app-shell">
+    <header>
+      <div class="header-left">
+        <div class="brand" id="brand-home" title="desync">
+          <canvas id="liquid-logo-canvas" width="288" height="72"></canvas>
+        </div>
+
+        <!-- Main Navigation Tabs (Only visible when logged in) -->
+        <nav class="top-tabs" id="top-tabs">
+          <button type="button" class="tab-btn active" data-tab="forums">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>forums</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="roulette">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>roulette</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="shop">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span>config shop</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="profile">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>profile & invites</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="staff" id="tab-btn-staff">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>staff panel</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Logged Out Nav -->
+      <div class="nav-actions" id="nav-logged-out">
+        <button id="open-login-btn" type="button">login</button>
+        <button id="open-register-btn" type="button" class="btn-primary">register (invite only)</button>
+      </div>
+
+      <!-- Logged In Nav -->
+      <div class="nav-actions" id="nav-logged-in" style="display: none;">
+        <div class="wallet-pill" title="your desync credits">
+          <span class="pulse-dot"></span>
+          <span id="credit-balance">500</span>
+          <span>cr</span>
+        </div>
+
+        <!-- Post-Register Discord Link Status Pill -->
+        <button id="header-discord-btn" type="button" class="btn-discord" style="padding: 6px 12px; font-size: 12px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>
+          </svg>
+          <span id="header-discord-label">link discord</span>
+        </button>
+
+        <!-- Role Switcher to test Owner / Admin / Mod / Booster / Member -->
+        <div style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--surface); border:1px solid var(--border);">
+          <span id="active-username" style="font-weight:600; font-size:12.5px;">user</span>
+          <select id="role-select-switcher" title="switch role to test permissions" style="background:transparent; border:none; color:#c4b5fd; font-size:11.5px; font-weight:600; outline:none; cursor:pointer;">
+            <option value="owner" style="background:#0b0b11;">role: owner</option>
+            <option value="admin" style="background:#0b0b11;">role: admin</option>
+            <option value="mod" style="background:#0b0b11;">role: mod</option>
+            <option value="booster" style="background:#0b0b11;">role: booster</option>
+            <option value="member" style="background:#0b0b11;">role: member</option>
+          </select>
+        </div>
+
+        <button id="logout-btn" type="button" style="padding: 6px 12px;">logout</button>
+      </div>
+    </header>
+
+    <!-- LANDING PAGE (ONLY VISIBLE WHEN LOGGED OUT) -->
+    <main id="landing-view">
+      <div class="hero">
+        <canvas id="hero-liquid-canvas" width="640" height="164"></canvas>
+        <h1>invite-only index, stripped builds, config market.</h1>
+        <p>
+          private community board, credit roulette, and config marketplace. registration requires a valid invite code from an existing member or an owner invite wave. once registered, link your discord to sync server booster perks and access private sections.
+        </p>
+        <div class="hero-cta">
+          <button class="btn-primary" id="hero-register-btn" type="button" style="padding: 11px 22px; font-size: 13.5px;">
+            redeem invite & register
+          </button>
+          <button id="hero-login-btn" type="button" style="padding: 11px 20px;">member login</button>
+        </div>
+      </div>
+
+      <!-- 4 Unnumbered Feature Cards -->
+      <div class="bento-grid">
+        <div class="bento-card">
+          <div>
+            <div class="bento-pill">
+              <span class="pulse-dot"></span>
+              <span>audited builds</span>
+            </div>
+            <h3>unpacked & stripped</h3>
+            <p>every jar, dll, and loader gets deobfuscated and checked before release. remote auth checks are patched locally and sketchy webhooks are stripped out.</p>
+          </div>
+          <div class="game-tags">
+            <span class="game-tag">clean binaries</span>
+            <span class="game-tag">local auth</span>
+          </div>
+        </div>
+
+        <div class="bento-card">
+          <div>
+            <div class="bento-pill">invite-only access</div>
+            <h3>private registration</h3>
+            <p>no public signups or crawler indexing. accounts require an invite key distributed during owner invite waves, with discord linking after registration.</p>
+          </div>
+          <div class="game-tags">
+            <span class="game-tag">invite waves</span>
+            <span class="game-tag">discord sync</span>
+          </div>
+        </div>
+
+        <div class="bento-card">
+          <div>
+            <div class="bento-pill">booster lounge</div>
+            <h3>server booster perks</h3>
+            <p>linking a discord account that boosts our server unlocks the exclusive booster category with private builds, early drops, and premium configs.</p>
+          </div>
+          <div class="game-tags">
+            <span class="game-tag">early drops</span>
+            <span class="game-tag">booster builds</span>
+          </div>
+        </div>
+
+        <div class="bento-card">
+          <div>
+            <div class="bento-pill">roulette & shop</div>
+            <h3>win credits, buy configs</h3>
+            <p>spin the credit roulette to multiply your balance, then spend credits in the community shop to unlock and download configs or sell your own.</p>
+          </div>
+          <div class="game-tags">
+            <span class="game-tag">14x zero</span>
+            <span class="game-tag">instant download</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- MEMBER WORKSPACE (STRICTLY HIDDEN WHEN LOGGED OUT) -->
+    <div id="member-workspace">
+
+      <!-- 1. FORUMS VIEW -->
+      <div id="view-forums">
+        <!-- Main Category Index -->
+        <div id="forum-categories-container"></div>
+
+        <!-- Single Section Thread List -->
+        <div id="forum-section-view" style="display: none;">
+          <div class="subboard-bar">
+            <div>
+              <div class="breadcrumb">
+                <span class="crumb-link" id="back-to-forums">← all forums</span>
+                <span>/</span>
+                <span id="section-crumb-cat">category</span>
+              </div>
+              <h2 id="section-view-title" style="font-size: 20px; font-weight: 600; color: #fff;">section</h2>
+              <p id="section-view-desc" style="font-size: 12.5px; color: var(--text-dim); margin-top: 2px;">description</p>
+            </div>
+            <div id="section-action-area"></div>
+          </div>
+
+          <div id="section-threads-list"></div>
+        </div>
+
+        <!-- FULL XENFORO-STYLE THREAD PAGE VIEW (MATCHING SCREENSHOT) -->
+        <div id="forum-thread-page" style="display: none;">
+          <div class="subboard-bar">
+            <div>
+              <div class="breadcrumb">
+                <span class="crumb-link" id="thread-back-to-forums">forums</span>
+                <span>/</span>
+                <span class="crumb-link" id="thread-back-to-board">#board</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span class="badge verified" id="thread-page-tag">release</span>
+                <h2 id="thread-page-title" style="font-size: 20px; font-weight: 600; color: #fff;">thread title</h2>
+              </div>
+            </div>
+            <div id="thread-mod-controls" style="display:flex; gap:8px;"></div>
+          </div>
+
+          <!-- Postbit Cards Container -->
+          <div id="xf-posts-container"></div>
+
+          <!-- Reply Composer Card -->
+          <div id="xf-reply-composer" style="background:#101017; border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+              <span style="font-size:13px; font-weight:600; color:#fff;">post a reply</span>
+              <span style="font-size:11.5px; color:var(--text-dim);">supports <code style="color:#fbbf24;">[quote="user"]...[/quote]</code> and <code style="color:#38bdf8;">[hide]...[/hide]</code> tags</span>
+            </div>
+            <form id="xf-reply-form">
+              <textarea id="xf-reply-textarea" rows="4" placeholder="write your reply..." required style="width:100%; background:#08080d; border:1px solid var(--border); border-radius:10px; padding:12px 14px; color:#fff; font-size:13.5px; outline:none; margin-bottom:12px; font-family:inherit;"></textarea>
+              <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" class="btn" onclick="insertHideTag()">insert [hide] tag</button>
+                <button type="submit" class="btn-primary">post reply</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. ROULETTE VIEW -->
+      <div id="view-roulette" style="display: none;">
+        <div class="roulette-shell">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h2 style="font-size: 20px; font-weight: 600; color: #fff;">desync roulette</h2>
+              <p style="font-size: 12.5px; color: var(--text-dim);">multiply your credits to buy private configs & luas in the shop.</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 12px; color: var(--text-dim);">recent rolls:</span>
+              <div id="roulette-history" style="display: flex; gap: 6px;"></div>
+            </div>
+          </div>
+
+          <div class="wheel-viewport">
+            <div class="wheel-Viewport-fade"></div>
+            <div class="wheel-center-marker"></div>
+            <div class="wheel-track" id="wheel-track"></div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: rgba(255,255,255,0.02); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--border);">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span style="font-size: 12.5px; color: var(--text-dim);">wager amount (cr):</span>
+              <input type="number" id="bet-amount-input" value="50" min="1" style="width: 110px; background: #07070c; border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; color: #fff; font-weight: 600; outline: none;">
+              <button type="button" class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="adjustWager(0.5)">1/2</button>
+              <button type="button" class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="adjustWager(2)">2x</button>
+              <button type="button" class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="adjustWager('max')">max</button>
+            </div>
+            <div id="roulette-status-text" style="font-size: 13px; color: #a5b4fc; font-weight: 500;">
+              pick a color below to spin
+            </div>
+          </div>
+
+          <div class="bet-grid">
+            <div class="bet-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:600; color:#fda4af;">phase zero</span>
+                <span class="badge" style="color:#fda4af; border-color:rgba(244,63,94,0.45);">pays 14x</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-dim);">lands on the rare center phase zero jackpot tile (1 of 15 slots).</p>
+              <button type="button" class="btn" style="width:100%; justify-content:center; padding:11px; background:rgba(244,63,94,0.16); border-color:rgba(244,63,94,0.45); color:#fecdd3;" onclick="spinRoulette('zero')">bet on phase zero (14x)</button>
+            </div>
+
+            <div class="bet-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:600; color:#fda4af;">desync zero</span>
+                <span class="badge" style="color:#fda4af; border-color:rgba(244,63,94,0.45);">pays 14x</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-dim);">lands on the rare center zero jackpot tile (1 of 15 slots).</p>
+              <button type="button" class="btn" style="width:100%; justify-content:center; padding:11px; background:rgba(244,63,94,0.16); border-color:rgba(244,63,94,0.45); color:#fecdd3;" onclick="spinRoulette('zero')">bet on zero (14x)</button>
+            </div>
+
+            <div class="bet-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:600; color:#bae6fd;">cobalt cyan</span>
+                <span class="badge" style="color:#bae6fd; border-color:rgba(56,189,248,0.4);">pays 2x</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-dim);">lands on any cobalt cyan tile (7 of 15 slots).</p>
+              <button type="button" class="btn" style="width:100%; justify-content:center; padding:11px; background:rgba(56,189,248,0.14); border-color:rgba(56,189,248,0.4); color:#e0f2fe;" onclick="spinRoulette('cobalt')">bet on cobalt (2x)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. CONFIG SHOP VIEW -->
+      <div id="view-shop" style="display: none;">
+        <div class="subboard-bar">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 600; color: #fff;">community config marketplace</h2>
+            <p style="font-size: 12.5px; color: var(--text-dim); margin-top: 2px;">
+              spend credits won in roulette to unlock configs & scripts, or list your own config with a download link to earn credits.
+            </p>
+          </div>
+          <button type="button" class="btn-primary" id="open-sell-config-btn">+ list config for sale</button>
+        </div>
+
+        <div id="shop-listings-container"></div>
+      </div>
+
+      <!-- 4. PROFILE CUSTOMIZATION & INVITES VIEW -->
+      <div id="view-profile" style="display: none;">
+        <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 18px;">
+          <!-- Profile Customization Form -->
+          <div class="panel-card">
+            <div>
+              <h2 style="font-size:18px; font-weight:600; color:#fff; margin-bottom:4px;">customize identity & signature</h2>
+              <p style="font-size:12.5px; color:var(--text-dim); margin-bottom:18px;">your avatar, custom title, bio, and signature strip appear on every thread and reply you post.</p>
+
+              <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px; padding:14px; background:#09090f; border:1px solid var(--border); border-radius:12px;">
+                <div class="ds-avatar" id="profile-preview-avatar" style="width:64px; height:64px; font-size:24px; flex-shrink:0;">u</div>
+                <div>
+                  <div style="font-size:14px; font-weight:700; color:#fff;" id="profile-preview-name">user</div>
+                  <div style="font-size:12px; color:var(--text-dim);" id="profile-preview-title">reverse engineer</div>
+                  <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn" style="padding:4px 9px; font-size:11px;" onclick="setPresetAvatar('discord')">discord blue</button>
+                    <button type="button" class="btn" style="padding:4px 9px; font-size:11px;" onclick="setPresetAvatar('violet')">void avatar</button>
+                    <button type="button" class="btn" style="padding:4px 9px; font-size:11px;" onclick="setPresetAvatar('rose')">crimson avatar</button>
+                  </div>
+                </div>
+              </div>
+
+              <form id="profile-save-form">
+                <div class="form-field">
+                  <label>avatar image url (leave blank for letter / preset avatar)</label>
+                  <input type="text" id="prof-avatar-url" placeholder="https://i.imgur.com/example.png">
+                </div>
+                <div class="form-field">
+                  <label>custom user title (shown under username in posts)</label>
+                  <input type="text" id="prof-custom-title" placeholder="e.g. content lover / kernel enjoyer">
+                </div>
+                <div class="form-field">
+                  <label>bio / about me</label>
+                  <textarea id="prof-bio" rows="2" placeholder="short bio shown on your profile..."></textarea>
+                </div>
+                <div class="form-field">
+                  <label>forum signature (rendered at the bottom of your posts)</label>
+                  <textarea id="prof-signature" rows="3" placeholder="e.g. desync private member • uid #001 • discord linked"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:10px;">save profile changes</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Right Column: Discord Link & Member Invites -->
+          <div style="display:flex; flex-direction:column; gap:18px;">
+            <div class="panel-card">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <h3 style="font-size:16px; font-weight:600; color:#fff;">discord integration & booster sync</h3>
+                  <span class="badge" id="prof-discord-badge">unlinked</span>
+                </div>
+                <p style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px;">
+                  link your discord account after registering so the bot can pull you into the server and sync your server booster role.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                  <button type="button" class="btn-discord" id="prof-link-discord-btn" style="justify-content:center; padding:10px;">
+                    link discord account & join server
+                  </button>
+                  <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,92,168,0.3); background:rgba(255,92,168,0.06); font-size:12px; color:#fbcfe8; cursor:pointer;">
+                    <span>simulate active server booster status on discord</span>
+                    <input type="checkbox" id="prof-booster-sync-check" style="accent-color:#ff5ca8;">
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <h3 style="font-size:16px; font-weight:600; color:#fff;">your invite keys</h3>
+                  <span class="badge verified" id="prof-invite-count">0 available</span>
+                </div>
+                <p style="font-size:12.5px; color:var(--text-dim); margin-bottom:12px;">
+                  registration is strictly invite-only. copy an unused key below to invite a friend, or wait for an owner invite wave.
+                </p>
+                <div id="prof-invite-list" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. HIERARCHICAL STAFF PANEL (MOD / ADMIN / OWNER) -->
+      <div id="view-staff" style="display: none;">
+        <div class="subboard-bar">
+          <div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <h2 style="font-size: 20px; font-weight: 600; color: #fff;">staff control center</h2>
+              <span class="badge owner" id="staff-clearance-badge">clearance: owner</span>
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-dim); margin-top: 2px;">
+              tiered permissions: moderators handle bans & reports, admins manage roles & economy, owners control invite waves & global locks.
+            </p>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;">
+          <!-- TIER 1: MODERATOR PANEL (mod, admin, owner) -->
+          <div class="panel-card" id="staff-box-mod">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-size:15px; font-weight:600; color:#38bdf8;">moderator tools</span>
+                <span class="badge mod">mod+</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-dim); margin-bottom:14px;">ban or unban members, review reported posts, and lock threads.</p>
+
+              <div class="form-field">
+                <label>ban / unban username</label>
+                <div style="display:flex; gap:6px;">
+                  <input type="text" id="mod-ban-input" placeholder="username...">
+                  <button type="button" class="btn" onclick="staffToggleBan()">ban/unban</button>
+                </div>
+              </div>
+
+              <div style="font-size:12px; color:var(--text-dim); margin-top:12px; margin-bottom:6px;">member status list:</div>
+              <div id="staff-member-list" style="display:flex; flex-direction:column; gap:6px; max-height:170px; overflow-y:auto;"></div>
+            </div>
+          </div>
+
+          <!-- TIER 2: ADMIN PANEL (admin, owner) -->
+          <div class="panel-card" id="staff-box-admin">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-size:15px; font-weight:600; color:#c4b5fd;">administrator tools</span>
+                <span class="badge admin">admin+</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-dim); margin-bottom:14px;">assign member roles, grant credits/reputation, and create single invite keys.</p>
+
+              <div class="form-field">
+                <label>set member role (member / booster / mod)</label>
+                <div style="display:flex; gap:6px;">
+                  <select id="admin-user-select"></select>
+                  <select id="admin-role-target">
+                    <option value="member">member</option>
+                    <option value="booster">booster</option>
+                    <option value="mod">mod</option>
+                  </select>
+                  <button type="button" class="btn-accent" onclick="adminAssignRole()">set</button>
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label>grant credits to your wallet or member</label>
+                <div style="display:flex; gap:6px;">
+                  <input type="number" id="admin-credit-input" value="1000">
+                  <button type="button" class="btn" onclick="adminGrantCredits()">+ add cr</button>
+                </div>
+              </div>
+
+              <button type="button" class="btn" style="width:100%; justify-content:center; margin-top:6px;" onclick="adminGenerateSingleInvite()">
+                + generate 1 invite code
+              </button>
+            </div>
+          </div>
+
+          <!-- TIER 3: OWNER PANEL (owner only) -->
+          <div class="panel-card" id="staff-box-owner" style="border-color:rgba(244,63,94,0.3);">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-size:15px; font-weight:600; color:#fda4af;">owner command</span>
+                <span class="badge owner">owner only</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-dim); margin-bottom:14px;">trigger server-wide invite waves (+n invites for every member), promote admins, or purge keys.</p>
+
+              <div style="padding:12px; background:rgba(244,63,94,0.07); border:1px solid rgba(244,63,94,0.25); border-radius:12px; margin-bottom:12px;">
+                <div style="font-size:12.5px; font-weight:600; color:#fecdd3; margin-bottom:6px;">invite wave generator</div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <input type="number" id="owner-wave-count" value="1" min="1" max="10" style="width:70px; background:#07070c; border:1px solid var(--border); border-radius:8px; padding:7px 10px; color:#fff;">
+                  <button type="button" class="btn-primary" style="flex:1; justify-content:center;" onclick="ownerTriggerInviteWave()">
+                    send invite wave to all
+                  </button>
+                </div>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button type="button" class="btn" style="width:100%; justify-content:center;" onclick="ownerPurgeUnusedInvites()">
+                  purge all unused invite keys
+                </button>
+                <button type="button" class="btn" style="width:100%; justify-content:center;" onclick="ownerPromoteAllToAdmin()">
+                  promote selected user to admin
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- INVITE-ONLY AUTH MODAL (LOGIN / REGISTER) -->
+  <div class="modal-backdrop" id="auth-modal">
+    <div class="modal">
+      <div class="modal-top">
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="tab-btn active" id="modal-tab-login" onclick="switchAuthTab('login')">login</button>
+          <button type="button" class="tab-btn" id="modal-tab-register" onclick="switchAuthTab('register')">register (invite only)</button>
+        </div>
+        <button class="btn" id="close-auth" type="button" style="padding: 4px 10px; font-size: 12px;">esc</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="login-form">
+        <div class="form-field">
+          <label>username</label>
+          <input type="text" id="login-user" placeholder="enter username" required autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label>password</label>
+          <input type="password" id="login-pass" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:10px; margin-bottom:10px;">
+          sign in
+        </button>
+        <button type="button" class="btn-discord" style="width:100%; justify-content:center; padding:10px;" onclick="loginWithDiscordQuick()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
+          <span>sign in with linked discord</span>
+        </button>
+      </form>
+
+      <!-- REGISTER FORM (STRICT INVITE-ONLY) -->
+      <form id="register-form" style="display: none;">
+        <div style="padding:10px 12px; border-radius:10px; background:rgba(124,92,255,0.08); border:1px solid rgba(124,92,255,0.28); font-size:12px; color:#d8b4fe; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <span>demo invite key: <strong id="demo-invite-code-label">dsync-9f4a-invite</strong></span>
+          <button type="button" class="btn" style="padding:3px 9px; font-size:11px;" onclick="fillDemoInvite()">autofill key</button>
+        </div>
+
+        <div class="form-field">
+          <label>invite code (required)</label>
+          <input type="text" id="reg-invite" placeholder="dsync-xxxx-xxxx" required autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label>choose username</label>
+          <input type="text" id="reg-user" placeholder="username" required autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label>password</label>
+          <input type="password" id="reg-pass" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; justify-content:center; padding:10px;">
+          redeem invite & create account
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- POST-REGISTER DISCORD LINK MODAL -->
+  <div class="modal-backdrop" id="discord-link-modal">
+    <div class="modal">
+      <div class="modal-top">
+        <h3>link discord & sync server booster</h3>
+        <button class="btn" type="button" style="padding:4px 10px; font-size:12px;" onclick="document.getElementById('discord-link-modal').classList.remove('open')">esc</button>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px;">
+        connect your discord handle so our bot can add you to the discord server and sync your server booster role.
+      </p>
+      <form id="discord-link-form">
+        <div class="form-field">
+          <label>your discord tag / handle</label>
+          <input type="text" id="discord-handle-input" placeholder="e.g. defusher#0001" required>
+        </div>
+        <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,92,168,0.35); background:rgba(255,92,168,0.08); margin-bottom:14px; font-size:12px; color:#fbcfe8; cursor:pointer;">
+          <span>sync active server booster status (+unlock booster category)</span>
+          <input type="checkbox" id="discord-modal-booster-check" checked style="accent-color:#ff5ca8;">
+        </label>
+        <button type="submit" class="btn-discord" style="width:100%; justify-content:center; padding:11px;">
+          authorize oauth2 & join discord server
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- BOOSTER LOCKED MODAL -->
+  <div class="modal-backdrop" id="booster-locked-modal">
+    <div class="modal">
+      <div class="modal-top">
+        <h3 style="color:#ff5ca8;">server boosters only</h3>
+        <button class="btn" type="button" style="padding:4px 10px; font-size:12px;" onclick="document.getElementById('booster-locked-modal').classList.remove('open')">esc</button>
+      </div>
+      <p style="font-size:13px; color:var(--text-dim); margin-bottom:18px;">
+        this section is restricted to members who boost our discord server (or staff). link your discord account with server booster status enabled or switch your role to <strong>booster</strong> in the header to enter.
+      </p>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn-booster" style="flex:1; justify-content:center; padding:10px;" onclick="unlockBoosterInstant()">
+          sync booster role now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE THREAD MODAL -->
+  <div class="modal-backdrop" id="new-thread-modal">
+    <div class="modal modal-wide">
+      <div class="modal-top">
+        <h3>post thread in <span id="modal-board-target">section</span></h3>
+        <button class="btn" id="close-new-thread" type="button" style="padding: 4px 10px; font-size: 12px;">esc</button>
+      </div>
+      <form id="new-thread-form">
+        <div class="form-field">
+          <label for="thread-title-input">thread title</label>
+          <input type="text" id="thread-title-input" placeholder="enter thread title..." required autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label for="thread-tag-input">prefix tag</label>
+          <select id="thread-tag-input">
+            <option value="release">release</option>
+            <option value="cracked">cracked</option>
+            <option value="offsets">offsets</option>
+            <option value="booster">booster drop</option>
+            <option value="discussion">discussion</option>
+            <option value="help">help</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="thread-body-input">content (supports [hide]secret[/hide] and [quote="user"]text[/quote])</label>
+          <textarea id="thread-body-input" rows="6" placeholder="write your post, paste offsets, or wrap secret links in [hide]...[/hide]" required></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 11px;">publish thread</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SELL CONFIG MODAL -->
+  <div class="modal-backdrop" id="sell-config-modal">
+    <div class="modal modal-wide">
+      <div class="modal-top">
+        <h3>list config on marketplace</h3>
+        <button class="btn" id="close-sell-config" type="button" style="padding: 4px 10px; font-size: 12px;">esc</button>
+      </div>
+      <form id="sell-config-form">
+        <div class="form-field">
+          <label for="cfg-title">config title</label>
+          <input type="text" id="cfg-title" placeholder="e.g. premier rage + auto-wall cfg" required autocomplete="off">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-field">
+            <label for="cfg-game">game / engine</label>
+            <select id="cfg-game">
+              <option value="cs2">cs2</option>
+              <option value="csgo">csgo legacy</option>
+              <option value="roblox">roblox</option>
+              <option value="rust">rust / tarkov</option>
+              <option value="other">other</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="cfg-price">price (in credits)</label>
+            <input type="number" id="cfg-price" value="150" min="0" required>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="cfg-desc">description / notes</label>
+          <textarea id="cfg-desc" rows="3" placeholder="describe keybinds, visuals, or lua scripts included..." required></textarea>
+        </div>
+        <div class="form-field">
+          <label for="cfg-link">download link or raw config payload (unlocked after purchase)</label>
+          <input type="text" id="cfg-link" placeholder="https://mega.nz/... or direct file url / config code" required autocomplete="off">
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 11px;">publish listing</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================
+       1. TOAST NOTIFICATIONS
+       ========================================== */
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast-notice');
+      document.getElementById('toast-text').textContent = String(msg).toLowerCase();
+      el.classList.add('show');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+    }
+
+    /* ==========================================
+       2. LIQUID MERCURY CHROME SHADER WORDMARK
+       ========================================== */
+    function initLiquidWordmarks() {
+      const targets = [
+        { id: 'liquid-logo-canvas', fontSize: 46, weight: '800' },
+        { id: 'hero-liquid-canvas', fontSize: 116, weight: '800' }
+      ];
+
+      const instances = targets.map(cfg => {
+        const canvas = document.getElementById(cfg.id);
+        if (!canvas) return null;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = w;
+        maskCanvas.height = h;
+        const mCtx = maskCanvas.getContext('2d');
+        return { ctx, mCtx, maskCanvas, w, h, fontSize: cfg.fontSize, weight: cfg.weight };
+      }).filter(Boolean);
+
+      let t = 0;
+      function renderLiquid() {
+        t += 0.022;
+        instances.forEach(inst => {
+          const { ctx, mCtx, maskCanvas, w, h, fontSize, weight } = inst;
+
+          mCtx.clearRect(0, 0, w, h);
+          mCtx.font = `${weight} ${fontSize}px 'Syne', 'Inter', sans-serif`;
+          mCtx.textBaseline = 'middle';
+          mCtx.fillStyle = '#ffffff';
+          mCtx.fillText('desync', 2, h * 0.52);
+
+          ctx.clearRect(0, 0, w, h);
+          ctx.save();
+          ctx.drawImage(maskCanvas, 0, 0);
+          ctx.globalCompositeOperation = 'source-in';
+
+          const baseGrad = ctx.createLinearGradient(0, 0, w, h);
+          baseGrad.addColorStop(0, '#161622');
+          baseGrad.addColorStop(0.5, '#0b0b12');
+          baseGrad.addColorStop(1, '#1d192b');
+          ctx.fillStyle = baseGrad;
+          ctx.fillRect(0, 0, w, h);
+
+          const blobs = [
+            { x: (Math.sin(t * 0.9) * 0.45 + 0.5) * w, y: (Math.cos(t * 1.1) * 0.4 + 0.5) * h, r: h * 0.95, c1: '#ffffff', c2: '#a78bfa', c3: 'rgba(139,92,246,0)' },
+            { x: (Math.cos(t * 0.75 + 1.4) * 0.45 + 0.5) * w, y: (Math.sin(t * 0.95 + 2.0) * 0.4 + 0.5) * h, r: h * 0.85, c1: '#e0f2fe', c2: '#38bdf8', c3: 'rgba(56,189,248,0)' },
+            { x: (Math.sin(t * 1.3 + 3.1) * 0.48 + 0.5) * w, y: (Math.sin(t * 0.8 - 1.2) * 0.42 + 0.5) * h, r: h * 0.9, c1: '#f4f4f8', c2: '#c084fc', c3: 'rgba(192,132,252,0)' },
+            { x: (Math.cos(t * 1.15 - 0.8) * 0.42 + 0.5) * w, y: (Math.cos(t * 1.25 + 0.5) * 0.4 + 0.5) * h, r: h * 0.75, c1: '#ffffff', c2: '#cbd5e1', c3: 'rgba(203,213,225,0)' }
+          ];
+
+          ctx.globalCompositeOperation = 'source-atop';
+          blobs.forEach(b => {
+            const g = ctx.createRadialGradient(b.x, b.y, b.r * 0.04, b.x, b.y, b.r);
+            g.addColorStop(0, b.c1);
+            g.addColorStop(0.28, b.c2);
+            g.addColorStop(0.52, '#09090f');
+            g.addColorStop(0.72, b.c2);
+            g.addColorStop(1, b.c3);
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          const waveX = ((Math.sin(t * 0.65) + 1) * 0.5) * w;
+          const sheen = ctx.createLinearGradient(waveX - h, 0, waveX + h, h);
+          sheen.addColorStop(0, 'rgba(255,255,255,0)');
+          sheen.addColorStop(0.42, 'rgba(56,189,248,0.35)');
+          sheen.addColorStop(0.5, 'rgba(255,255,255,0.92)');
+          sheen.addColorStop(0.58, 'rgba(167,139,250,0.45)');
+          sheen.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = sheen;
+          ctx.fillRect(0, 0, w, h);
+
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.font = `${weight} ${fontSize}px 'Syne', 'Inter', sans-serif`;
+          ctx.textBaseline = 'middle';
+          ctx.lineWidth = fontSize > 70 ? 1.4 : 0.9;
+          const strokeGrad = ctx.createLinearGradient(0, 0, w, h);
+          strokeGrad.addColorStop(0, 'rgba(255,255,255,0.55)');
+          strokeGrad.addColorStop(0.5, 'rgba(167,139,250,0.35)');
+          strokeGrad.addColorStop(1, 'rgba(56,189,248,0.45)');
+          ctx.strokeStyle = strokeGrad;
+          ctx.strokeText('desync', 2, h * 0.52);
+          ctx.restore();
+        });
+        requestAnimationFrame(renderLiquid);
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => renderLiquid());
+      } else {
+        renderLiquid();
+      }
+    }
+
+    /* ==========================================
+       3. JITTER-FREE 3D BACKGROUND
+       ========================================== */
+    let targetX = 1.65;
+    let targetOpacity = 0.19;
+    let mouseX = 0;
+    let mouseY = 0;
+
+    function initThreeBackground() {
+      const canvas = document.getElementById('webgl-canvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 0, 6.5);
+
+      const parallaxGroup = new THREE.Group();
+      parallaxGroup.position.x = targetX;
+      scene.add(parallaxGroup);
+
+      const spinGroup = new THREE.Group();
+      parallaxGroup.add(spinGroup);
+
+      const knotGeo = new THREE.TorusKnotGeometry(1.3, 0.34, 180, 28, 2, 3);
+      const basePositions = knotGeo.attributes.position.array.slice();
+
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: 0x7c5cff,
+        wireframe: true,
+        transparent: true,
+        opacity: targetOpacity
+      });
+      const knotMesh = new THREE.Mesh(knotGeo, wireMat);
+      spinGroup.add(knotMesh);
+
+      const ghostMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.06
+      });
+      const ghostKnot = new THREE.Mesh(knotGeo, ghostMat);
+      ghostKnot.scale.set(1.035, 1.035, 1.035);
+      ghostKnot.rotation.z = 0.06;
+      spinGroup.add(ghostKnot);
+
+      const icoGeo = new THREE.IcosahedronGeometry(0.84, 2);
+      const icoMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.055
+      });
+      const icoMesh = new THREE.Mesh(icoGeo, icoMat);
+      spinGroup.add(icoMesh);
+
+      const pCount = 240;
+      const pPos = new Float32Array(pCount * 3);
+      for (let i = 0; i < pCount * 3; i++) pPos[i] = (Math.random() - 0.5) * 11;
+      const pGeo = new THREE.BufferGeometry();
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+      const pMat = new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.022, transparent: true, opacity: 0.38 });
+      const particles = new THREE.Points(pGeo, pMat);
+      scene.add(particles);
+
+      window.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX / window.innerWidth - 0.5) * 0.42;
+        mouseY = (e.clientY / window.innerHeight - 0.5) * 0.42;
+      });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      const clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        const dt = Math.min(clock.getDelta(), 0.05);
+        const elapsed = clock.getElapsedTime();
+
+        const posAttr = knotGeo.attributes.position;
+        const arr = posAttr.array;
+        for (let i = 0; i < arr.length; i += 3) {
+          const bx = basePositions[i];
+          const by = basePositions[i + 1];
+          const bz = basePositions[i + 2];
+          const wave = 1 + 0.032 * Math.sin(bx * 2.2 + elapsed * 1.6) * Math.cos(by * 2.2 + elapsed * 1.3);
+          arr[i] = bx * wave;
+          arr[i + 1] = by * wave;
+          arr[i + 2] = bz * wave;
+        }
+        posAttr.needsUpdate = true;
+
+        spinGroup.rotation.y += dt * 0.18;
+        spinGroup.rotation.x += dt * 0.09;
+        icoMesh.rotation.y -= dt * 0.26;
+        particles.rotation.y += dt * 0.03;
+
+        const lerpFactor = 1 - Math.exp(-4.5 * dt);
+        parallaxGroup.position.x += (targetX - parallaxGroup.position.x) * lerpFactor;
+        parallaxGroup.rotation.y += (mouseX - parallaxGroup.rotation.y) * lerpFactor;
+        parallaxGroup.rotation.x += (mouseY - parallaxGroup.rotation.x) * lerpFactor;
+        wireMat.opacity += (targetOpacity - wireMat.opacity) * lerpFactor;
+
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    /* ==========================================
+       4. FORUM CATEGORIES, BOOSTERS & USER PROFILES
+          (NO FAKE POSTS — ALL COUNTERS START AT 0)
+       ========================================== */
+    const forumCategories = [
+      {
+        id: 'cat-official',
+        title: 'official',
+        collapsed: false,
+        boosterCat: false,
+        sections: [
+          { id: 'announcements', title: 'announcements', desc: 'official server notices, mirror updates, and community news.', iconBg: 'rgba(244,63,94,0.14)', iconColor: '#fb7185', isNew: true, adminOnly: true, boosterOnly: false, views: 0, threads: [] },
+          { id: 'updatelogs', title: 'update logs', desc: 'changelogs for loaders, schema dumpers, and forum features.', iconBg: 'rgba(124,92,255,0.14)', iconColor: '#c084fc', isNew: false, adminOnly: true, boosterOnly: false, views: 0, threads: [] }
+        ]
+      },
+      {
+        id: 'cat-boosters',
+        title: 'server boosters',
+        collapsed: false,
+        boosterCat: true,
+        sections: [
+          { id: 'booster-lounge', title: 'booster lounge', desc: 'private chat, priority requests, and direct staff line for server boosters.', iconBg: 'rgba(255,92,168,0.16)', iconColor: '#ff5ca8', isNew: true, adminOnly: false, boosterOnly: true, views: 0, threads: [] },
+          { id: 'booster-builds', title: 'booster builds & private configs', desc: 'exclusive private builds, zero-day offsets, and booster-only rage configs.', iconBg: 'rgba(255,92,168,0.16)', iconColor: '#f472b6', isNew: true, adminOnly: false, boosterOnly: true, views: 0, threads: [] },
+          { id: 'early-drops', title: 'early drops', desc: 'early access to unpacked loaders and cracks before they hit public sections.', iconBg: 'rgba(168,85,247,0.18)', iconColor: '#e879f9', isNew: false, adminOnly: false, boosterOnly: true, views: 0, threads: [] }
+        ]
+      },
+      {
+        id: 'cat-general',
+        title: 'general',
+        collapsed: false,
+        boosterCat: false,
+        sections: [
+          { id: 'discussion', title: 'discussion', desc: 'open conversations, community topics, and general threads.', iconBg: 'rgba(56,189,248,0.14)', iconColor: '#38bdf8', isNew: true, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'softdev', title: 'software development', desc: 'share, ask, or discuss cheat & software development, reversing, and c++.', iconBg: 'rgba(59,130,246,0.16)', iconColor: '#60a5fa', isNew: false, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'bugs', title: 'bug reports', desc: 'found a broken mirror or issue in the index? report it here.', iconBg: 'rgba(161,161,170,0.12)', iconColor: '#a1a1aa', isNew: false, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'suggestions', title: 'suggestions', desc: 'feature requests for the site, discord server, or new sections.', iconBg: 'rgba(168,85,247,0.14)', iconColor: '#c084fc', isNew: true, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'help', title: 'help & support', desc: 'troubleshooting for loaders, injectors, crashes, or configs.', iconBg: 'rgba(14,165,233,0.15)', iconColor: '#38bdf8', isNew: true, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'offtopic', title: 'off-topic', desc: 'hardware setups, benchmarks, and general chatter.', iconBg: 'rgba(244,63,94,0.12)', iconColor: '#f43f5e', isNew: true, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'media', title: 'media', desc: 'clips, showcases, and recorded highlights.', iconBg: 'rgba(113,113,122,0.14)', iconColor: '#a1a1aa', isNew: false, adminOnly: false, boosterOnly: false, views: 0, threads: [] }
+        ]
+      },
+      {
+        id: 'cat-cs',
+        title: 'counter-strike',
+        collapsed: false,
+        boosterCat: false,
+        sections: [
+          { id: 'cs2', title: 'cs2', desc: 'counter-strike 2 unpacked builds, external esp/aim, configs, and verified client.dll offsets.', iconBg: 'rgba(16,185,129,0.14)', iconColor: '#34d399', isNew: true, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'csgo-legacy', title: 'csgo legacy', desc: '2018 & 2020 legacy hvh dlls, supremacy/fatality packs, and resolvers.', iconBg: 'rgba(245,158,11,0.14)', iconColor: '#fbbf24', isNew: false, adminOnly: false, boosterOnly: false, views: 0, threads: [] }
+        ]
+      },
+      {
+        id: 'cat-other',
+        title: 'other engines',
+        collapsed: false,
+        boosterCat: false,
+        sections: [
+          { id: 'roblox', title: 'roblox', desc: 'byfron usermode externals, executors, and deobfuscated script hubs.', iconBg: 'rgba(239,68,68,0.14)', iconColor: '#f87171', isNew: true, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'rust-tarkov', title: 'rust & tarkov', desc: 'dma radar parsers, recoil scripts, and spt/live tools.', iconBg: 'rgba(249,115,22,0.14)', iconColor: '#fb923c', isNew: false, adminOnly: false, boosterOnly: false, views: 0, threads: [] },
+          { id: 'universal', title: 'universal tools', desc: 'il2cpp dumpers, mono injectors, ida/ghidra sigmakers, and unpacking tools.', iconBg: 'rgba(56,189,248,0.14)', iconColor: '#38bdf8', isNew: false, adminOnly: false, boosterOnly: false, views: 0, threads: [] }
+        ]
+      }
+    ];
+
+    const configListings = [];
+    const validInvitePool = new Set(['dsync-9f4a-invite']);
+
+    // Registry of user profiles for identity header & staff management
+    const usersDB = {};
+    let uidCounter = 1;
+
+    function ensureUserProfile(username, defaultRole = 'owner') {
+      const clean = username.trim().toLowerCase() || 'member';
+      if (!usersDB[clean]) {
+        const formattedUid = String(uidCounter++).padStart(3, '0');
+        usersDB[clean] = {
+          username: clean,
+          uid: formattedUid,
+          role: defaultRole,
+          customTitle: 'reverse engineer',
+          avatarUrl: '',
+          avatarBg: '#5865f2',
+          bio: 'private desync member.',
+          signature: `desync private index • uid #${formattedUid} • verified`,
+          messages: 0,
+          likes: 0,
+          reputation: 0,
+          discordLinked: false,
+          discordHandle: '',
+          isBooster: false,
+          banned: false,
+          invites: ['dsync-9f4a-invite']
+        };
+      }
+      return usersDB[clean];
+    }
+
+    const state = {
+      loggedIn: false,
+      username: 'user',
+      role: 'owner', // 'owner' | 'admin' | 'mod' | 'booster' | 'member'
+      credits: 500,
+      activeTab: 'forums',
+      activeSectionId: null,
+      activeThreadObj: null,
+      spinning: false,
+      rollHistory: ['void', 'cobalt', 'void', 'zero', 'cobalt']
+    };
+
+    function hasBoosterAccess() {
+      const u = ensureUserProfile(state.username, state.role);
+      return ['owner', 'admin', 'mod', 'booster'].includes(state.role) || u.isBooster;
+    }
+
+    function hasStaffAccess() {
+      return ['owner', 'admin', 'mod'].includes(state.role);
+    }
+
+    function findSectionById(secId) {
+      for (const cat of forumCategories) {
+        for (const sec of cat.sections) {
+          if (sec.id === secId) return { cat, sec };
+        }
+      }
+      return null;
+    }
+
+    /* ==========================================
+       5. RENDERING FORUM CATEGORIES & SECTIONS
+       ========================================== */
+    const forumCategoriesContainer = document.getElementById('forum-categories-container');
+    const forumSectionView = document.getElementById('forum-section-view');
+    const forumThreadPage = document.getElementById('forum-thread-page');
+
+    function getGeometricEmblemSVG(secId, color) {
+      if (secId.includes('booster') || secId.includes('early')) {
+        return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8"><polygon points="12 2 19 9 12 22 5 9 12 2"/><polyline points="5 9 12 13 19 9"/></svg>`;
+      }
+      if (secId.includes('cs') || secId.includes('rust') || secId.includes('roblox')) {
+        return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg>`;
+      }
+      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>`;
+    }
+
+    function renderForumCategories() {
+      forumCategoriesContainer.innerHTML = '';
+
+      forumCategories.forEach(cat => {
+        const block = document.createElement('div');
+        block.className = 'forum-category-block' + (cat.boosterCat ? ' booster-cat' : '');
+
+        const header = document.createElement('div');
+        header.className = 'cat-header';
+        header.innerHTML = `
+          <div class="cat-header-left">
+            <span style="width:7px; height:7px; border-radius:2px; transform:rotate(45deg); background:${cat.boosterCat ? '#ff5ca8' : 'var(--accent)'}; box-shadow:0 0 10px ${cat.boosterCat ? '#ff5ca8' : 'var(--accent)'};"></span>
+            <span>${cat.title}</span>
+            ${cat.boosterCat ? '<span class="booster-pill">♦ booster clearance</span>' : ''}
+          </div>
+          <button type="button" class="cat-toggle-btn">${cat.collapsed ? '+' : '−'}</button>
+        `;
+        header.onclick = () => {
+          cat.collapsed = !cat.collapsed;
+          renderForumCategories();
+        };
+        block.appendChild(header);
+
+        if (!cat.collapsed) {
+          const rowsWrap = document.createElement('div');
+          cat.sections.forEach(sec => {
+            const threadCount = sec.threads.length;
+            const replyCount = sec.threads.reduce((acc, t) => acc + Math.max(0, t.posts.length - 1), 0);
+            const latestThread = sec.threads[0] || null;
+            const barPercent = Math.min(100, (threadCount * 18) + (replyCount * 8));
+
+            const row = document.createElement('div');
+            row.className = 'desync-ledger-row';
+            row.innerHTML = `
+              <div class="node-main">
+                <div class="node-emblem" style="border-color:${sec.iconBg};">
+                  ${getGeometricEmblemSVG(sec.id, sec.iconColor)}
+                </div>
+                <div class="node-text">
+                  <div class="node-title-line">
+                    <span class="node-title">${sec.title}</span>
+                    ${sec.isNew ? '<span class="micro-tag">active</span>' : ''}
+                    ${sec.adminOnly ? '<span class="staff-pill">staff post</span>' : ''}
+                    ${sec.boosterOnly ? '<span class="booster-pill">boosters</span>' : ''}
+                  </div>
+                  <div class="node-desc">${sec.desc}</div>
+                </div>
+              </div>
+
+              <div class="node-telemetry">
+                <div class="telemetry-line">
+                  <span><strong>${threadCount}</strong> threads</span>
+                  <span class="telemetry-slash">/</span>
+                  <span><strong>${replyCount}</strong> replies</span>
+                  <span class="telemetry-slash">/</span>
+                  <span><strong>${sec.views}</strong> views</span>
+                </div>
+                <div class="telemetry-bar">
+                  <div class="telemetry-bar-fill" style="width:${barPercent}%;"></div>
+                </div>
+              </div>
+
+              <div class="node-latest">
+                ${latestThread
+                  ? `<div class="latest-title">${latestThread.title}</div>
+                     <div class="latest-meta">${latestThread.time} • by ${latestThread.author}</div>`
+                  : `<div class="latest-empty"><span>—</span><span>0 activity</span></div>`
+                }
+              </div>
+            `;
+            row.onclick = () => openSection(sec.id);
+            rowsWrap.appendChild(row);
+          });
+          block.appendChild(rowsWrap);
+        }
+
+        forumCategoriesContainer.appendChild(block);
+      });
+    }
+
+    function openSection(secId) {
+      const found = findSectionById(secId);
+      if (!found) return;
+
+      // Gate booster-only sections
+      if (found.sec.boosterOnly && !hasBoosterAccess()) {
+        document.getElementById('booster-locked-modal').classList.add('open');
+        return;
+      }
+
+      state.activeSectionId = secId;
+      state.activeThreadObj = null;
+      found.sec.views += 1;
+
+      forumCategoriesContainer.style.display = 'none';
+      forumThreadPage.style.display = 'none';
+      forumSectionView.style.display = 'block';
+
+      document.getElementById('section-crumb-cat').textContent = found.cat.title;
+      document.getElementById('section-view-title').textContent = found.sec.title;
+      document.getElementById('section-view-desc').textContent = found.sec.desc;
+
+      const actionArea = document.getElementById('section-action-area');
+      actionArea.innerHTML = '';
+
+      const isStaff = ['owner', 'admin'].includes(state.role);
+      if (found.sec.adminOnly && !isStaff) {
+        const pill = document.createElement('span');
+        pill.className = 'badge';
+        pill.style.padding = '8px 14px';
+        pill.textContent = 'read-only (admins only)';
+        actionArea.appendChild(pill);
+      } else {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-primary';
+        btn.textContent = '+ create thread';
+        btn.onclick = () => {
+          document.getElementById('modal-board-target').textContent = found.sec.title;
+          document.getElementById('new-thread-modal').classList.add('open');
+        };
+        actionArea.appendChild(btn);
+      }
+
+      renderSectionThreads();
+    }
+
+    function renderSectionThreads() {
+      const found = findSectionById(state.activeSectionId);
+      const listEl = document.getElementById('section-threads-list');
+      listEl.innerHTML = '';
+
+      if (!found || found.sec.threads.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty-board-box">
+            <div style="font-size:14px; color:#fff; font-weight:500; margin-bottom:4px;">no threads in this section yet</div>
+            <div style="font-size:12.5px;">click <strong>+ create thread</strong> to publish the first post in ${found ? found.sec.title : 'this board'}.</div>
+          </div>
+        `;
+        return;
+      }
+
+      found.sec.threads.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'thread-item-row';
+        const replyCount = Math.max(0, item.posts.length - 1);
+        row.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge ${item.tag === 'booster' ? 'booster' : 'verified'}">${item.tag}</span>
+              <span style="font-size:14px; font-weight:600; color:#fff;">${item.title}</span>
+              ${item.locked ? '<span class="badge owner">locked</span>' : ''}
+            </div>
+            <div style="font-size:12px; color:var(--text-dim);">
+              started by <strong style="color:#d4d4e4;">${item.author}</strong> • ${item.time}
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; font-size:12px; color:var(--text-dim);">
+            <span>${replyCount} replies</span>
+            <span>→</span>
+          </div>
+        `;
+        row.onclick = () => openThreadPage(item);
+        listEl.appendChild(row);
+      });
+    }
+
+    document.getElementById('back-to-forums').onclick = () => {
+      state.activeSectionId = null;
+      state.activeThreadObj = null;
+      forumSectionView.style.display = 'none';
+      forumThreadPage.style.display = 'none';
+      forumCategoriesContainer.style.display = 'block';
+      renderForumCategories();
+    };
+
+    /* ==============================================================
+       6. BESPOKE DESYNC SPLIT-CARD THREAD PAGE (NO XENFORO CLONES)
+       ============================================================== */
+    function formatPostBodyHTML(rawText) {
+      let safe = rawText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      // Parse [quote="user"]...[/quote] into vertical liquid-violet accent block
+      safe = safe.replace(/\[quote="([^"]+)"\]([\s\S]*?)\[\/quote\]/gi, (_, qUser, qText) => {
+        const cleanedQuote = qText.replace(/\[hide\][\s\S]*?\[\/hide\]/gi, '[encrypted payload omitted from quote]').trim();
+        return `<div class="ds-quote-block">
+          <div class="ds-quote-head"><span>↳</span> <span>quoted from @${qUser}</span></div>
+          <div class="ds-quote-body">${cleanedQuote || '...'}</div>
+        </div>`;
+      });
+
+      // Parse [hide]...[/hide] into cryptographic payload container
+      safe = safe.replace(/\[hide\]([\s\S]*?)\[\/hide\]/gi, (_, secret) => {
+        return `<div class="ds-payload-container">
+          <div class="ds-payload-header">
+            <span>[desync::decrypted_payload]</span>
+            <span>sha256: verified • access granted</span>
+          </div>
+          <div class="ds-payload-content">${secret}</div>
+        </div>`;
+      });
+
+      return safe;
+    }
+
+    function getRoleColorClass(role) {
+      if (role === 'owner') return 'role-owner';
+      if (role === 'admin') return 'role-admin';
+      if (role === 'mod') return 'role-mod';
+      if (role === 'booster') return 'role-booster';
+      return 'role-member';
+    }
+
+    function openThreadPage(threadObj) {
+      state.activeThreadObj = threadObj;
+      const found = findSectionById(state.activeSectionId);
+      if (found) found.sec.views += 1;
+
+      forumCategoriesContainer.style.display = 'none';
+      forumSectionView.style.display = 'none';
+      forumThreadPage.style.display = 'block';
+
+      document.getElementById('thread-back-to-board').textContent = found ? `# ${found.sec.title}` : '# board';
+      document.getElementById('thread-page-tag').textContent = threadObj.tag;
+      document.getElementById('thread-page-title').textContent = threadObj.title;
+
+      // Staff mod controls on thread
+      const modBar = document.getElementById('thread-mod-controls');
+      modBar.innerHTML = '';
+      if (hasStaffAccess()) {
+        const lockBtn = document.createElement('button');
+        lockBtn.type = 'button';
+        lockBtn.className = 'btn';
+        lockBtn.textContent = threadObj.locked ? 'unlock thread' : 'lock thread';
+        lockBtn.onclick = () => {
+          threadObj.locked = !threadObj.locked;
+          openThreadPage(threadObj);
+          showToast(threadObj.locked ? 'thread locked' : 'thread unlocked');
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn';
+        delBtn.style.borderColor = 'rgba(244,63,94,0.4)';
+        delBtn.style.color = '#fda4af';
+        delBtn.textContent = 'delete thread';
+        delBtn.onclick = () => {
+          if (found) {
+            found.sec.threads = found.sec.threads.filter(t => t !== threadObj);
+            openSection(found.sec.id);
+            showToast('thread deleted by staff');
+          }
+        };
+        modBar.appendChild(lockBtn);
+        modBar.appendChild(delBtn);
+      }
+
+      document.getElementById('xf-reply-composer').style.display = threadObj.locked ? 'none' : 'block';
+      renderThreadPosts();
+    }
+
+    function renderThreadPosts() {
+      const threadObj = state.activeThreadObj;
+      const container = document.getElementById('xf-posts-container');
+      container.innerHTML = '';
+      if (!threadObj) return;
+
+      threadObj.posts.forEach((post, index) => {
+        const prof = ensureUserProfile(post.author, post.role);
+        const roleClass = getRoleColorClass(prof.role);
+        const hasLiked = post.likedBy.includes(state.username);
+
+        const card = document.createElement('article');
+        card.className = 'ds-post-card';
+
+        const avatarInner = prof.avatarUrl
+          ? `<img src="${prof.avatarUrl}" alt="${prof.username}" onerror="this.style.display='none'; this.parentElement.textContent='${prof.username[0]}'">`
+          : `<span>${prof.username[0]}</span>`;
+
+        card.innerHTML = `
+          <!-- FLOATING FROSTED-GLASS IDENTITY HEADER BAR -->
+          <div class="ds-identity-bar">
+            <div class="ds-id-left">
+              <div class="ds-avatar-wrap">
+                <div class="ds-avatar" style="background:${prof.avatarBg};">${avatarInner}</div>
+                <span class="ds-status-prism ${prof.username === state.username ? 'online' : ''}" title="status"></span>
+              </div>
+              <div class="ds-user-meta">
+                <div class="ds-user-top">
+                  <span class="${roleClass}" style="font-weight:700; font-size:14.5px;">${prof.username}</span>
+                  <span class="badge ${prof.role}">${prof.role}</span>
+                  <span class="ds-uid-pill">uid #${prof.uid}</span>
+                  <button type="button" class="ds-rep-pill" data-rep-user="${prof.username}" title="click to endorse (+1 rep)">
+                    [ +${prof.reputation} rep ]
+                  </button>
+                </div>
+                <div class="ds-user-sub">
+                  <span>${prof.customTitle}</span>
+                  <span>•</span>
+                  <span>${prof.messages} posts</span>
+                  <span>•</span>
+                  <span>${prof.likes} likes</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ds-id-right">
+              <span>${post.time}</span>
+              <span style="color:rgba(255,255,255,0.16);">/</span>
+              <span style="font-family:ui-monospace, monospace; color:#c4b5fd;">#${index + 1}</span>
+            </div>
+          </div>
+
+          <!-- SEAMLESS POST BODY -->
+          <div class="ds-post-body">${formatPostBodyHTML(post.body)}</div>
+
+          <!-- SIGNATURE STRIP -->
+          ${prof.signature ? `
+            <div class="ds-signature-strip">
+              <span>${prof.signature}</span>
+              <span style="font-size:10.5px; color:#525266;">verified sig</span>
+            </div>
+          ` : ''}
+
+          <!-- ACTION FOOTER -->
+          <div class="ds-post-footer">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button type="button" class="ds-action-btn" onclick="showToast('flagged post #${index + 1} for staff review')">
+                <span>flag</span>
+              </button>
+              ${post.likedBy.length > 0 ? `<span style="font-size:12px; color:var(--cyan);">✦ endorsed by ${post.likedBy.join(', ')}</span>` : ''}
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="ds-action-btn ${hasLiked ? 'liked' : ''}" data-like-idx="${index}">
+                <span>✦ ${hasLiked ? 'endorsed' : 'endorse'} (${post.likedBy.length})</span>
+              </button>
+              <button type="button" class="ds-action-btn" data-quote-idx="${index}">
+                <span>+ quote</span>
+              </button>
+              <button type="button" class="ds-action-btn" data-reply-user="${prof.username}">
+                <span>↩ reply</span>
+              </button>
+            </div>
+          </div>
+        `;
+
+        const repBtn = card.querySelector('[data-rep-user]');
+        if (repBtn) {
+          repBtn.onclick = () => {
+            prof.reputation += 1;
+            renderThreadPosts();
+            showToast(`+1 rep added to ${prof.username}`);
+          };
+        }
+
+        const likeBtn = card.querySelector('[data-like-idx]');
+        if (likeBtn) {
+          likeBtn.onclick = () => {
+            const idx = post.likedBy.indexOf(state.username);
+            if (idx === -1) {
+              post.likedBy.push(state.username);
+              prof.likes += 1;
+            } else {
+              post.likedBy.splice(idx, 1);
+              prof.likes = Math.max(0, prof.likes - 1);
+            }
+            renderThreadPosts();
+          };
+        }
+
+        const quoteBtn = card.querySelector('[data-quote-idx]');
+        if (quoteBtn) {
+          quoteBtn.onclick = () => {
+            const ta = document.getElementById('xf-reply-textarea');
+            const stripped = post.body.replace(/\[hide\][\s\S]*?\[\/hide\]/gi, '[encrypted payload]');
+            ta.value += `[quote="${prof.username}"]${stripped}[/quote]\n`;
+            ta.focus();
+          };
+        }
+
+        const replyBtn = card.querySelector('[data-reply-user]');
+        if (replyBtn) {
+          replyBtn.onclick = () => {
+            const ta = document.getElementById('xf-reply-textarea');
+            ta.value += `@${prof.username} `;
+            ta.focus();
+          };
+        }
+
+        container.appendChild(card);
+      });
+    }
+
+    window.insertHideTag = function() {
+      const ta = document.getElementById('xf-reply-textarea');
+      ta.value += `[hide]secret download link or offsets here[/hide]`;
+      ta.focus();
+    };
+
+    document.getElementById('thread-back-to-forums').onclick = () => {
+      document.getElementById('back-to-forums').click();
+    };
+
+    document.getElementById('thread-back-to-board').onclick = () => {
+      if (state.activeSectionId) openSection(state.activeSectionId);
+    };
+
+    document.getElementById('xf-reply-form').onsubmit = (e) => {
+      e.preventDefault();
+      if (!state.activeThreadObj) return;
+      const ta = document.getElementById('xf-reply-textarea');
+      const val = ta.value.trim().toLowerCase();
+      if (!val) return;
+
+      const userProf = ensureUserProfile(state.username, state.role);
+      userProf.messages += 1;
+
+      state.activeThreadObj.posts.push({
+        author: state.username,
+        role: state.role,
+        time: 'just now',
+        body: val,
+        likedBy: []
+      });
+
+      ta.value = '';
+      renderThreadPosts();
+      showToast('reply posted');
+    };
+
+    /* ==========================================
+       7. ROULETTE ENGINE (WIN CREDITS)
+       ========================================== */
+    const wheelSequence = [
+      'void', 'cobalt', 'void', 'cobalt', 'void', 'cobalt', 'void',
+      'zero',
+      'cobalt', 'void', 'cobalt', 'void', 'cobalt', 'void', 'cobalt'
+    ];
+
+    function buildRouletteStrip() {
+      const track = document.getElementById('wheel-track');
+      track.innerHTML = '';
+      for (let rep = 0; rep < 8; rep++) {
+        wheelSequence.forEach((type, idx) => {
+          const tile = document.createElement('div');
+          tile.className = 'wheel-tile ' + (type === 'void' ? 'tile-void' : type === 'cobalt' ? 'tile-cobalt' : 'tile-zero');
+          tile.innerHTML = `
+            <span>${type === 'zero' ? '0' : (idx + 1)}</span>
+            <span style="font-size:10px; font-weight:500; opacity:0.75;">${type === 'zero' ? '14x' : '2x'}</span>
+          `;
+          track.appendChild(tile);
+        });
+      }
+      renderRouletteHistory();
+    }
+
+    function renderRouletteHistory() {
+      const wrap = document.getElementById('roulette-history');
+      wrap.innerHTML = '';
+      state.rollHistory.slice(-6).forEach(r => {
+        const d = document.createElement('span');
+        d.className = 'history-dot ' + (r === 'void' ? 'tile-void' : r === 'cobalt' ? 'tile-cobalt' : 'tile-zero');
+        d.textContent = r === 'zero' ? '0' : r[0];
+        wrap.appendChild(d);
+      });
+    }
+
+    window.adjustWager = function(mode) {
+      const inp = document.getElementById('bet-amount-input');
+      let cur = parseInt(inp.value, 10) || 10;
+      if (mode === 'max') cur = Math.max(1, state.credits);
+      else cur = Math.max(1, Math.floor(cur * mode));
+      inp.value = Math.min(cur, Math.max(1, state.credits));
+    };
+
+    window.spinRoulette = function(choice) {
+      if (state.spinning) return;
+      const inp = document.getElementById('bet-amount-input');
+      const wager = parseInt(inp.value, 10) || 0;
+      if (wager <= 0) return showToast('enter a valid wager amount');
+      if (wager > state.credits) return showToast('not enough credits in your wallet');
+
+      state.credits -= wager;
+      updateWalletUI();
+      state.spinning = true;
+
+      const statusEl = document.getElementById('roulette-status-text');
+      statusEl.textContent = `rolling for ${choice}...`;
+
+      const outcomeIdxInSeq = Math.floor(Math.random() * wheelSequence.length);
+      const outcomeType = wheelSequence[outcomeIdxInSeq];
+      const targetTileIndex = 5 * wheelSequence.length + outcomeIdxInSeq;
+
+      const track = document.getElementById('wheel-track');
+      const viewportWidth = track.parentElement.clientWidth;
+      const tileStep = 84 + 8;
+      const jitterOffset = (Math.random() - 0.5) * 36;
+      const targetXPos = (targetTileIndex * tileStep) - (viewportWidth / 2) + (84 / 2) + 12 + jitterOffset;
+
+      track.style.transition = 'none';
+      track.style.transform = 'translateX(0px)';
+      void track.offsetWidth;
+
+      track.style.transition = 'transform 3.6s cubic-bezier(0.12, 0.85, 0.18, 1)';
+      track.style.transform = `translateX(-${targetXPos}px)`;
+
+      setTimeout(() => {
+        state.spinning = false;
+        state.rollHistory.push(outcomeType);
+        renderRouletteHistory();
+
+        if (outcomeType === choice) {
+          const mult = outcomeType === 'zero' ? 14 : 2;
+          const winAmount = wager * mult;
+          state.credits += winAmount;
+          updateWalletUI();
+          statusEl.textContent = `hit ${outcomeType}! won +${winAmount} cr`;
+          showToast(`won +${winAmount} cr on ${outcomeType}!`);
+        } else {
+          statusEl.textContent = `landed on ${outcomeType}. lost ${wager} cr`;
+          showToast(`rolled ${outcomeType} — try again`);
+        }
+      }, 3650);
+    };
+
+    /* ==========================================
+       8. CONFIG SHOP MARKETPLACE
+       ========================================== */
+    function renderShop() {
+      const container = document.getElementById('shop-listings-container');
+      container.innerHTML = '';
+
+      if (configListings.length === 0) {
+        container.innerHTML = `
+          <div class="empty-board-box">
+            <div style="font-size:15px; color:#fff; font-weight:500; margin-bottom:6px;">no configs listed yet</div>
+            <div style="font-size:13px; max-width:460px; margin:0 auto;">
+              click <strong>+ list config for sale</strong> in the top right to put a config on the market with a credit price and download link.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'shop-grid';
+
+      configListings.forEach(item => {
+        const isUnlocked = item.unlockedBy.includes(state.username) || item.seller === state.username;
+        const card = document.createElement('div');
+        card.className = 'config-card';
+        card.innerHTML = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span class="game-tag">${item.game}</span>
+              <span class="wallet-pill" style="padding:3px 10px; font-size:12px;">${item.price} cr</span>
+            </div>
+            <h3 style="font-size:16px; font-weight:600; color:#fff; margin-bottom:6px;">${item.title}</h3>
+            <p style="font-size:12.5px; color:var(--text-dim); margin-bottom:12px;">${item.desc}</p>
+            <div style="font-size:11.5px; color:var(--text-dim);">seller: <strong style="color:#fff;">${item.seller}</strong> • ${item.sales} sales</div>
+          </div>
+          <div style="border-top:1px solid var(--border); padding-top:14px;">
+            ${isUnlocked
+              ? `<div style="display:flex; flex-direction:column; gap:8px;">
+                   <div style="font-size:11px; color:var(--success);">✓ unlocked — download link ready:</div>
+                   <div style="display:flex; gap:8px;">
+                     <input type="text" readonly value="${item.link}" style="flex:1; background:#050508; border:1px solid rgba(16,185,129,0.35); border-radius:8px; padding:7px 10px; font-size:12px; color:#a7f3d0; outline:none;">
+                     <button type="button" class="btn-accent" style="padding:7px 14px; font-size:12px;" onclick="triggerConfigDownload('${item.id}')">download</button>
+                   </div>
+                 </div>`
+              : `<button type="button" class="btn-primary" style="width:100%; justify-content:center; padding:10px;" onclick="buyConfig('${item.id}')">
+                   buy config for ${item.price} cr
+                 </button>`
+            }
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      container.appendChild(grid);
+    }
+
+    window.buyConfig = function(cfgId) {
+      const item = configListings.find(c => c.id === cfgId);
+      if (!item) return;
+      if (state.credits < item.price) return showToast('insufficient credits — win more in roulette first');
+      state.credits -= item.price;
+      item.sales += 1;
+      item.unlockedBy.push(state.username);
+      updateWalletUI();
+      renderShop();
+      showToast(`purchased ${item.title} — download unlocked!`);
+    };
+
+    window.triggerConfigDownload = function(cfgId) {
+      const item = configListings.find(c => c.id === cfgId);
+      if (!item) return;
+      if (item.link.startsWith('http://') || item.link.startsWith('https://')) {
+        window.open(item.link, '_blank', 'noopener,noreferrer');
+      }
+      const blob = new Blob([`// desync config: ${item.title}\n// seller: ${item.seller}\n// source/link: ${item.link}\n`], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${item.title.replace(/[^a-z0-9]/gi, '_')}.cfg`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`downloading ${item.title}...`);
+    };
+
+    document.getElementById('open-sell-config-btn').onclick = () => {
+      document.getElementById('sell-config-modal').classList.add('open');
+    };
+    document.getElementById('close-sell-config').onclick = () => {
+      document.getElementById('sell-config-modal').classList.remove('open');
+    };
+    document.getElementById('sell-config-form').onsubmit = (e) => {
+      e.preventDefault();
+      const title = document.getElementById('cfg-title').value.trim().toLowerCase();
+      const game = document.getElementById('cfg-game').value.toLowerCase();
+      const price = Math.max(0, parseInt(document.getElementById('cfg-price').value, 10) || 0);
+      const desc = document.getElementById('cfg-desc').value.trim().toLowerCase();
+      const link = document.getElementById('cfg-link').value.trim();
+      if (!title || !desc || !link) return;
+
+      configListings.unshift({
+        id: 'cfg-' + Date.now(),
+        title,
+        game,
+        price,
+        desc,
+        link,
+        seller: state.username,
+        sales: 0,
+        unlockedBy: []
+      });
+
+      document.getElementById('sell-config-form').reset();
+      document.getElementById('sell-config-modal').classList.remove('open');
+      renderShop();
+      showToast(`listed "${title}" for ${price} cr`);
+    };
+
+    /* ==========================================
+       9. PROFILE CUSTOMIZATION & INVITE KEYS
+       ========================================== */
+    function renderProfileView() {
+      const prof = ensureUserProfile(state.username, state.role);
+      const avEl = document.getElementById('profile-preview-avatar');
+      avEl.style.background = prof.avatarBg;
+      avEl.innerHTML = prof.avatarUrl
+        ? `<img src="${prof.avatarUrl}" alt="${prof.username}" onerror="this.style.display='none'; this.parentElement.textContent='${prof.username[0]}'">`
+        : `<span>${prof.username[0]}</span>`;
+
+      document.getElementById('profile-preview-name').textContent = prof.username;
+      document.getElementById('profile-preview-title').textContent = prof.customTitle;
+
+      document.getElementById('prof-avatar-url').value = prof.avatarUrl;
+      document.getElementById('prof-custom-title').value = prof.customTitle;
+      document.getElementById('prof-bio').value = prof.bio;
+      document.getElementById('prof-signature').value = prof.signature;
+
+      const dBadge = document.getElementById('prof-discord-badge');
+      const dBtn = document.getElementById('prof-link-discord-btn');
+      const bCheck = document.getElementById('prof-booster-sync-check');
+      bCheck.checked = prof.isBooster;
+
+      if (prof.discordLinked) {
+        dBadge.className = 'badge verified';
+        dBadge.textContent = `linked: ${prof.discordHandle}`;
+        dBtn.textContent = 'unlink discord account';
+      } else {
+        dBadge.className = 'badge';
+        dBadge.textContent = 'unlinked';
+        dBtn.textContent = 'link discord account & join server';
+      }
+
+      // Render user's invite keys
+      document.getElementById('prof-invite-count').textContent = `${prof.invites.length} available`;
+      const invList = document.getElementById('prof-invite-list');
+      invList.innerHTML = '';
+      if (prof.invites.length === 0) {
+        invList.innerHTML = `<div style="font-size:12px; color:var(--text-dim);">no unused invite keys. ask an owner for an invite wave.</div>`;
+      } else {
+        prof.invites.forEach(code => {
+          const item = document.createElement('div');
+          item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#08080d; border:1px solid var(--border); border-radius:9px; font-size:12px;';
+          item.innerHTML = `
+            <code style="color:#a7f3d0; font-weight:600;">${code}</code>
+            <button type="button" class="btn" style="padding:3px 10px; font-size:11px;" onclick="copyInviteCode('${code}')">copy key</button>
+          `;
+          invList.appendChild(item);
+        });
+      }
+    }
+
+    window.copyInviteCode = function(code) {
+      const ta = document.createElement('textarea');
+      ta.value = code;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast(`copied invite key: ${code}`);
+    };
+
+    window.setPresetAvatar = function(preset) {
+      const prof = ensureUserProfile(state.username, state.role);
+      prof.avatarUrl = '';
+      if (preset === 'discord') prof.avatarBg = '#5865f2';
+      if (preset === 'violet') prof.avatarBg = '#7c5cff';
+      if (preset === 'rose') prof.avatarBg = '#e11d48';
+      renderProfileView();
+      showToast('avatar preset updated');
+    };
+
+    document.getElementById('profile-save-form').onsubmit = (e) => {
+      e.preventDefault();
+      const prof = ensureUserProfile(state.username, state.role);
+      prof.avatarUrl = document.getElementById('prof-avatar-url').value.trim();
+      prof.customTitle = document.getElementById('prof-custom-title').value.trim().toLowerCase() || 'content lover';
+      prof.bio = document.getElementById('prof-bio').value.trim().toLowerCase();
+      prof.signature = document.getElementById('prof-signature').value.trim().toLowerCase();
+      renderProfileView();
+      showToast('profile & postbit settings saved');
+    };
+
+    document.getElementById('prof-booster-sync-check').onchange = (e) => {
+      const prof = ensureUserProfile(state.username, state.role);
+      prof.isBooster = e.target.checked;
+      showToast(prof.isBooster ? 'server booster status synced' : 'booster status disabled');
+    };
+
+    document.getElementById('prof-link-discord-btn').onclick = () => {
+      const prof = ensureUserProfile(state.username, state.role);
+      if (prof.discordLinked) {
+        prof.discordLinked = false;
+        prof.discordHandle = '';
+        syncHeaderDiscordBtn();
+        renderProfileView();
+        showToast('discord account unlinked');
+      } else {
+        document.getElementById('discord-link-modal').classList.add('open');
+      }
+    };
+
+    /* ==========================================
+       10. HIERARCHICAL STAFF PANEL (MOD / ADMIN / OWNER)
+       ========================================== */
+    function renderStaffPanel() {
+      const badge = document.getElementById('staff-clearance-badge');
+      badge.textContent = `clearance: ${state.role}`;
+      badge.className = `badge ${state.role}`;
+
+      const isModPlus = ['mod', 'admin', 'owner'].includes(state.role);
+      const isAdminPlus = ['admin', 'owner'].includes(state.role);
+      const isOwner = state.role === 'owner';
+
+      document.getElementById('staff-box-mod').style.opacity = isModPlus ? '1' : '0.4';
+      document.getElementById('staff-box-mod').style.pointerEvents = isModPlus ? 'auto' : 'none';
+
+      document.getElementById('staff-box-admin').style.opacity = isAdminPlus ? '1' : '0.4';
+      document.getElementById('staff-box-admin').style.pointerEvents = isAdminPlus ? 'auto' : 'none';
+
+      document.getElementById('staff-box-owner').style.opacity = isOwner ? '1' : '0.4';
+      document.getElementById('staff-box-owner').style.pointerEvents = isOwner ? 'auto' : 'none';
+
+      const memList = document.getElementById('staff-member-list');
+      const userSelect = document.getElementById('admin-user-select');
+      memList.innerHTML = '';
+      userSelect.innerHTML = '';
+
+      Object.values(usersDB).forEach(u => {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:#08080d; border:1px solid var(--border); border-radius:8px; font-size:12px;';
+        div.innerHTML = `
+          <span><strong class="${getRoleColorClass(u.role)}">${u.username}</strong> (${u.role})</span>
+          <span class="badge ${u.banned ? 'owner' : 'verified'}">${u.banned ? 'banned' : `${u.invites.length} inv`}</span>
+        `;
+        memList.appendChild(div);
+
+        const opt = document.createElement('option');
+        opt.value = u.username;
+        opt.textContent = u.username;
+        userSelect.appendChild(opt);
+      });
+    }
+
+    window.staffToggleBan = function() {
+      const target = document.getElementById('mod-ban-input').value.trim().toLowerCase();
+      if (!target) return;
+      const prof = ensureUserProfile(target, 'member');
+      prof.banned = !prof.banned;
+      document.getElementById('mod-ban-input').value = '';
+      renderStaffPanel();
+      showToast(`${prof.username} ${prof.banned ? 'banned' : 'unbanned'}`);
+    };
+
+    window.adminAssignRole = function() {
+      const target = document.getElementById('admin-user-select').value;
+      const newRole = document.getElementById('admin-role-target').value;
+      if (!target || !usersDB[target]) return;
+      usersDB[target].role = newRole;
+      if (target === state.username) {
+        state.role = newRole;
+        document.getElementById('role-select-switcher').value = newRole;
+      }
+      renderStaffPanel();
+      showToast(`updated ${target} role to ${newRole}`);
+    };
+
+    window.adminGrantCredits = function() {
+      const amt = parseInt(document.getElementById('admin-credit-input').value, 10) || 0;
+      state.credits += amt;
+      updateWalletUI();
+      showToast(`granted +${amt} cr`);
+    };
+
+    function makeRandomInviteKey() {
+      const hex = Math.random().toString(16).substring(2, 6);
+      const code = `dsync-${hex}-wave`;
+      validInvitePool.add(code);
+      return code;
+    }
+
+    window.adminGenerateSingleInvite = function() {
+      const prof = ensureUserProfile(state.username, state.role);
+      const code = makeRandomInviteKey();
+      prof.invites.unshift(code);
+      renderStaffPanel();
+      showToast(`generated invite key: ${code}`);
+    };
+
+    window.ownerTriggerInviteWave = function() {
+      const count = Math.max(1, Math.min(10, parseInt(document.getElementById('owner-wave-count').value, 10) || 1));
+      const allUsers = Object.values(usersDB);
+      allUsers.forEach(u => {
+        for (let i = 0; i < count; i++) {
+          u.invites.unshift(makeRandomInviteKey());
+        }
+      });
+      renderStaffPanel();
+      showToast(`invite wave complete: +${count} invite(s) distributed to ${allUsers.length} member(s)`);
+    };
+
+    window.ownerPurgeUnusedInvites = function() {
+      Object.values(usersDB).forEach(u => { u.invites = []; });
+      validInvitePool.clear();
+      validInvitePool.add('dsync-9f4a-invite');
+      renderStaffPanel();
+      showToast('purged all unused member invite keys');
+    };
+
+    window.ownerPromoteAllToAdmin = function() {
+      const target = document.getElementById('admin-user-select').value;
+      if (!target || !usersDB[target]) return;
+      usersDB[target].role = 'admin';
+      renderStaffPanel();
+      showToast(`promoted ${target} to administrator`);
+    };
+
+    /* ==========================================
+       11. AUTH, INVITE GATE & GLOBAL SYNC
+       ========================================== */
+    function updateWalletUI() {
+      document.getElementById('credit-balance').textContent = state.credits;
+    }
+
+    function syncHeaderDiscordBtn() {
+      const prof = ensureUserProfile(state.username, state.role);
+      const lbl = document.getElementById('header-discord-label');
+      if (prof.discordLinked) {
+        lbl.textContent = prof.isBooster ? `${prof.discordHandle} (booster)` : prof.discordHandle;
+      } else {
+        lbl.textContent = 'link discord';
+      }
+    }
+
+    function switchMainTab(tabName) {
+      state.activeTab = tabName;
+      document.querySelectorAll('#top-tabs .tab-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === tabName);
+      });
+
+      document.getElementById('view-forums').style.display = tabName === 'forums' ? 'block' : 'none';
+      document.getElementById('view-roulette').style.display = tabName === 'roulette' ? 'block' : 'none';
+      document.getElementById('view-shop').style.display = tabName === 'shop' ? 'block' : 'none';
+      document.getElementById('view-profile').style.display = tabName === 'profile' ? 'block' : 'none';
+      document.getElementById('view-staff').style.display = tabName === 'staff' ? 'block' : 'none';
+
+      if (tabName === 'forums') {
+        if (state.activeThreadObj) renderThreadPosts();
+        else if (state.activeSectionId) renderSectionThreads();
+        else renderForumCategories();
+      } else if (tabName === 'shop') {
+        renderShop();
+      } else if (tabName === 'profile') {
+        renderProfileView();
+      } else if (tabName === 'staff') {
+        renderStaffPanel();
+      }
+    }
+
+    document.querySelectorAll('#top-tabs .tab-btn').forEach(btn => {
+      btn.onclick = () => switchMainTab(btn.dataset.tab);
+    });
+
+    function syncAppView() {
+      const landing = document.getElementById('landing-view');
+      const workspace = document.getElementById('member-workspace');
+      const navOut = document.getElementById('nav-logged-out');
+      const navIn = document.getElementById('nav-logged-in');
+      const topTabs = document.getElementById('top-tabs');
+
+      if (!state.loggedIn) {
+        landing.style.display = 'flex';
+        workspace.style.display = 'none';
+        navOut.style.display = 'flex';
+        navIn.style.display = 'none';
+        topTabs.style.display = 'none';
+        targetX = 1.65;
+        targetOpacity = 0.19;
+      } else {
+        const prof = ensureUserProfile(state.username, state.role);
+        prof.role = state.role;
+        landing.style.display = 'none';
+        workspace.style.display = 'block';
+        navOut.style.display = 'none';
+        navIn.style.display = 'flex';
+        topTabs.style.display = 'flex';
+
+        const nameEl = document.getElementById('active-username');
+        nameEl.textContent = state.username;
+        nameEl.className = getRoleColorClass(state.role);
+
+        document.getElementById('role-select-switcher').value = state.role;
+        updateWalletUI();
+        syncHeaderDiscordBtn();
+        targetX = 0;
+        targetOpacity = 0.055;
+        switchMainTab(state.activeTab);
+      }
+    }
+
+    /* Invite-Only Auth Modal Logic */
+    const authModal = document.getElementById('auth-modal');
+
+    window.switchAuthTab = function(mode) {
+      document.getElementById('modal-tab-login').classList.toggle('active', mode === 'login');
+      document.getElementById('modal-tab-register').classList.toggle('active', mode === 'register');
+      document.getElementById('login-form').style.display = mode === 'login' ? 'block' : 'none';
+      document.getElementById('register-form').style.display = mode === 'register' ? 'block' : 'none';
+    };
+
+    window.fillDemoInvite = function() {
+      const firstKey = Array.from(validInvitePool)[0] || 'dsync-9f4a-invite';
+      document.getElementById('reg-invite').value = firstKey;
+      showToast('demo invite key filled');
+    };
+
+    document.getElementById('open-login-btn').onclick = () => {
+      switchAuthTab('login');
+      authModal.classList.add('open');
+    };
+    document.getElementById('hero-login-btn').onclick = () => {
+      switchAuthTab('login');
+      authModal.classList.add('open');
+    };
+    document.getElementById('open-register-btn').onclick = () => {
+      switchAuthTab('register');
+      authModal.classList.add('open');
+    };
+    document.getElementById('hero-register-btn').onclick = () => {
+      switchAuthTab('register');
+      authModal.classList.add('open');
+    };
+    document.getElementById('close-auth').onclick = () => authModal.classList.remove('open');
+
+    document.getElementById('login-form').onsubmit = (e) => {
+      e.preventDefault();
+      const userVal = document.getElementById('login-user').value.trim().toLowerCase() || 'member';
+      const prof = ensureUserProfile(userVal, state.role);
+      if (prof.banned) return showToast('this account is banned by a moderator');
+
+      state.loggedIn = true;
+      state.username = userVal;
+      authModal.classList.remove('open');
+      syncAppView();
+      showToast(`signed in as ${state.username}`);
+    };
+
+    window.loginWithDiscordQuick = function() {
+      const userVal = document.getElementById('login-user').value.trim().toLowerCase() || 'operator';
+      const prof = ensureUserProfile(userVal, 'owner');
+      prof.discordLinked = true;
+      prof.discordHandle = `${userVal}#0001`;
+      prof.isBooster = true;
+      state.loggedIn = true;
+      state.username = userVal;
+      authModal.classList.remove('open');
+      syncAppView();
+      showToast(`signed in via linked discord (${prof.discordHandle})`);
+    };
+
+    document.getElementById('register-form').onsubmit = (e) => {
+      e.preventDefault();
+      const invCode = document.getElementById('reg-invite').value.trim().toLowerCase();
+      const userVal = document.getElementById('reg-user').value.trim().toLowerCase();
+      if (!validInvitePool.has(invCode)) {
+        return showToast('invalid or expired invite code — registration is invite-only');
+      }
+      if (!userVal) return;
+
+      ensureUserProfile(userVal, 'owner');
+      state.loggedIn = true;
+      state.username = userVal;
+      authModal.classList.remove('open');
+      syncAppView();
+      showToast(`invite redeemed! welcome ${state.username} — link your discord in header`);
+    };
+
+    /* Post-Register Discord Linking */
+    document.getElementById('header-discord-btn').onclick = () => {
+      document.getElementById('discord-link-modal').classList.add('open');
+    };
+
+    document.getElementById('discord-link-form').onsubmit = (e) => {
+      e.preventDefault();
+      const handle = document.getElementById('discord-handle-input').value.trim().toLowerCase() || `${state.username}#0001`;
+      const isBoost = document.getElementById('discord-modal-booster-check').checked;
+      const prof = ensureUserProfile(state.username, state.role);
+      prof.discordLinked = true;
+      prof.discordHandle = handle;
+      prof.isBooster = isBoost;
+      document.getElementById('discord-link-modal').classList.remove('open');
+      syncHeaderDiscordBtn();
+      if (state.activeTab === 'profile') renderProfileView();
+      showToast(`discord linked (${handle}) & added to server!`);
+    };
+
+    window.unlockBoosterInstant = function() {
+      const prof = ensureUserProfile(state.username, state.role);
+      prof.discordLinked = true;
+      prof.discordHandle = `${state.username}#0001`;
+      prof.isBooster = true;
+      state.role = 'booster';
+      document.getElementById('booster-locked-modal').classList.remove('open');
+      syncAppView();
+      showToast('server booster status synced — booster category unlocked!');
+    };
+
+    document.getElementById('role-select-switcher').onchange = (e) => {
+      state.role = e.target.value;
+      const prof = ensureUserProfile(state.username, state.role);
+      prof.role = state.role;
+      syncAppView();
+      showToast(`switched clearance to ${state.role}`);
+    };
+
+    document.getElementById('logout-btn').onclick = () => {
+      state.loggedIn = false;
+      syncAppView();
+      showToast('logged out');
+    };
+
+    /* Thread Creation */
+    document.getElementById('close-new-thread').onclick = () => {
+      document.getElementById('new-thread-modal').classList.remove('open');
+    };
+
+    document.getElementById('new-thread-form').onsubmit = (e) => {
+      e.preventDefault();
+      const found = findSectionById(state.activeSectionId);
+      if (!found) return;
+
+      const title = document.getElementById('thread-title-input').value.trim().toLowerCase();
+      const tag = document.getElementById('thread-tag-input').value.toLowerCase();
+      const body = document.getElementById('thread-body-input').value.trim().toLowerCase();
+      if (!title || !body) return;
+
+      const prof = ensureUserProfile(state.username, state.role);
+      prof.messages += 1;
+
+      const newThread = {
+        id: 't-' + Date.now(),
+        title,
+        tag,
+        author: state.username,
+        time: 'just now',
+        locked: false,
+        posts: [
+          {
+            author: state.username,
+            role: state.role,
+            time: 'just now',
+            body,
+            likedBy: []
+          }
+        ]
+      };
+
+      found.sec.threads.unshift(newThread);
+      document.getElementById('new-thread-form').reset();
+      document.getElementById('new-thread-modal').classList.remove('open');
+      openThreadPage(newThread);
+      showToast(`thread published in ${found.sec.title}`);
+    };
+
+    window.onload = function () {
+      initLiquidWordmarks();
+      initThreeBackground();
+      buildRouletteStrip();
+      syncAppView();
+    };
+  </script>
+</body>
+</html>
